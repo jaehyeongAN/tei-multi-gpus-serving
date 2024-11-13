@@ -41,3 +41,10 @@ run_docker() {
     -v $PWD/${config_file}:/etc/nginx/conf.d/default.conf:ro \           # 서비스별로 다른 Nginx 설정 파일을 읽기 전용으로 마운트
     -p $port:80 nginx:latest                                             # 호스트의 지정된 포트를 컨테이너의 80번 포트와 연결
 }
+
+# 모델별 Docker 컨테이너 실행
+# Text Embeddings 모델과 Re-ranker 모델의 컨테이너를 각각 실행하고, 각 모델에 대해 Nginx 로드 밸런서를 구성
+# `bge-m3` 모델은 8001 포트를 통해 외부에 노출
+# `bge-reranker-v2-m3` 모델은 8002 포트를 통해 외부에 노출
+run_docker "BAAI/bge-m3" 8001 "bge-embedder-tei" "nginx-embedder.conf"
+run_docker "BAAI/bge-reranker-v2-m3" 8002 "bge-reranker-tei" "nginx-reranker.conf"
