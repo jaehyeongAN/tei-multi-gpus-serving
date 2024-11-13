@@ -1,11 +1,10 @@
-```bash
 #!/bin/bash
 
 # 현재 디렉토리의 `data` 폴더를 Docker 컨테이너에 마운트할 볼륨 디렉토리로 지정
 volume=$PWD/data
 
 # 사용할 Docker 이미지 지정 (해당 예제에서는 Nvidia T4 기반의 이미지 활용)
-image=ghcr.io/huggingface/text-embeddings-inference:turing-1.3 # 
+image=ghcr.io/huggingface/text-embeddings-inference:turing-1.3 
 
 # 사용할 모델의 버전(revision)을 지정 (기본은 main 브랜치)
 revision=main
