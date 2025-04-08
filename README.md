@@ -28,21 +28,47 @@ The system consists of:
 
 ## Setup and Configuration
 
-### Docker Network
-The system uses a custom Docker network (`tei-net`) to connect all containers.
-
-### Dockerfile
-A simple Dockerfile based on the nginx image:
+### 1. Clone Repo
 ```
-FROM nginx:latest
-RUN rm /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+git clone -b feature/closed-network https://github.com/HelpNow-AI/tei-multi-gpu-loadbalancing.git
 ```
 
-### Configuration Files
-- `nginx-embedder.conf`: Configuration for embedding service load balancing
-- `nginx-reranker.conf`: Configuration for reranking service load balancing
+### 2. Downdload Nginx image and Save to. `.tar`
+```
+docker pull nginx:latest
+docker save -o ./tei-images/nginx.tar nginx:latest
+```
+
+### 3. Download TEI Image based on your GPU architecture and Save to `.tar`
+```
+# Option 1: Turing architecture (T4, RTX 2000 series, …)
+docker pull ghcr.io/huggingface/text-embeddings-inference:turing-latest
+docker save -o ./tei-images/text-embeddings-inference-turing.tar ghcr.io/huggingface/text-embeddings-inference:turing-latest
+```
+```
+# Option 2: Ampere 80 architecture (A100, A30)
+docker pull ghcr.io/huggingface/text-embeddings-inference:89-latest
+docker save -o ./tei-images/text-embeddings-inference-ampere80.tar ghcr.io/huggingface/text-embeddings-inference:89-latest
+```
+```
+# Option 3: Ada Lovelave architecture (RTX 4000 series, …)
+docker pull ghcr.io/huggingface/text-embeddings-inference:latest 
+docker save -o ./tei-images/text-embeddings-inference-adalovelace.tar ghcr.io/huggingface/text-embeddings-inference:latest
+```
+```
+# Option 4: Hopper architecture (H100)
+docker pull ghcr.io/huggingface/text-embeddings-inference:hopper-latest
+docker save -o ./tei-images/text-embeddings-inference-hopper.tar ghcr.io/huggingface/text-embeddings-inference:hopper-latest
+```
+
+### 4. Download HF Models (prerequisite: Git LFS install)
+```
+mkdir models
+cd ./models
+
+git clone https://huggingface.co/BAAI/bge-m3 # bge-m3
+git clone https://huggingface.co/BAAI/bge-reranker-v2-m3 # bge-reranker-v2-m3
+```
 
 ## Deployment
 
