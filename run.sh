@@ -40,6 +40,7 @@ run_docker() {
 
   # 모델 컨테이너 실행 (해당 예제에서는 두 개의 GPU 장치를 사용해 컨테이너를 각각 실행하며, GPU ID는 0과 1로 할당)
   for i in $(seq 0 1); do
+    # docker run -d --restart always --runtime=nvidia --gpus '"device='$i'"' \
     docker run -d --restart always --gpus '"device='$i'"' \
       --network tei-net --name ${service_name}-$i \
       -v $volume:$volume \
