@@ -1,35 +1,66 @@
-# Text Embeddings Inference 멀티 GPU 추론
-이 시스템은 nginx를 사용하여 TEI 컨테이너에 대한 로드 밸런싱을 제공하여 멀티 GPU 환경에서 추론을 수행할 수 있도록 설계되었습니다. `nginx-embedder.conf`와 `nginx-reranker.conf` 파일은 각각 임베더와 리랭커 서비스에 대한 nginx 설정을 정의합니다.
+# Text Embeddings Inference Multi-GPU Serving
 
-  
+## Overview
+This system provides load balancing for Text Embeddings Inference (TEI) containers using Nginx, enabling efficient inference across multiple GPUs. The architecture distributes incoming requests to multiple TEI containers to maximize GPU utilization and improve inference performance.
 
-## 도식 
-다음은 시스템의 기본 아키텍처입니다.
-+-------------------+ +-----------------------+ +-----------------------+
-| 클라이언트 요청 | --> | nginx (로드 밸런서) | --> | TEI 컨테이너 (멀티 GPU) |
-+-------------------+ +-----------------------+ +-----------------------+
+## Architecture
+![tei-lb](./tei-lb.png)
 
-nginx는 들어오는 요청을 여러 TEI 컨테이너에 분산하여 멀티 GPU를 효율적으로 활용하고 추론 성능을 향상시킵니다.
+The system consists of:
+- Multiple TEI containers running on separate GPUs
+- Nginx as a load balancer to distribute requests
+- Configuration for both embedding and reranking services
 
-  
-## 설정
-### nginx
-nginx는 `nginx.conf` 파일을 사용하여 설정됩니다. 이 파일은 `nginx-embedder.conf`와 `nginx-reranker.conf`에서 정의된 업스트림 서버를 사용하여 로드 밸런싱을 구성합니다.
+## Components
 
-`nginx-embedder.conf` 파일은 `bge-embedder-tei` 업스트림을 정의하고, `bge-embedder-tei-0` 및 `bge-embedder-tei-1` 서버로 라우팅합니다.
+### Nginx Load Balancer
+- Uses separate configuration files for each service type:
+  - `nginx-embedder.conf`: Defines the `bge-embedder-tei` upstream for embedding services
+  - `nginx-reranker.conf`: Defines the `bge-reranker-tei` upstream for reranking services
+- Routes requests to appropriate TEI container instances
 
-`nginx-reranker.conf` 파일은 `bge-reranker-tei` 업스트림을 정의하고, `bge-reranker-tei-0` 및 `bge-reranker-tei-1` 서버로 라우팅합니다.
+### TEI Containers
+- Each container runs on a dedicated GPU
+- Support for different GPU types (T4, L4, A100, H100)
+- Configured for specific models:
+  - Embedding model: `BAAI/bge-m3` (exposed on port 8001)
+  - Reranking model: `BAAI/bge-reranker-v2-m3` (exposed on port 8002)
 
+## Setup and Configuration
 
-### Docker
+### Docker Network
+The system uses a custom Docker network (`tei-net`) to connect all containers.
 
-Dockerfile은 nginx 이미지를 기반으로 빌드됩니다. `default.conf` 파일을 제거하고, 프로젝트의 `nginx.conf` 파일을 사용하도록 설정합니다. 80 포트를 통해 서비스를 제공합니다.
+### Dockerfile
+A simple Dockerfile based on the nginx image:
+```
+FROM nginx:latest
+RUN rm /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+```
 
-## 실행 방법
-### Nginx 로드밸런서 실행
+### Configuration Files
+- `nginx-embedder.conf`: Configuration for embedding service load balancing
+- `nginx-reranker.conf`: Configuration for reranking service load balancing
 
-`./run-nginx-loadbalancer.sh`
+## Deployment
 
-### TEI 컨테이너 실행
+### Running the System
+1. To start the entire system with both embedder and reranker services:
+```bash
+./run.sh [GPU_TYPE]
+```
+Where `GPU_TYPE` is one of: T4 (default), L4, A100, or H100.
 
-`./run-tei-container.sh`
+2. The script will:
+   - Create a Docker network
+   - Start two TEI containers for each service (embedder and reranker)
+   - Configure and start Nginx load balancers for each service
+
+### Access Points
+- Embedding service: http://localhost:8001
+- Reranking service: http://localhost:8002
+
+## Data Storage
+The system mounts a local `data` directory to each container for persistent storage and model caching.

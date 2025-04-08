@@ -1,12 +1,25 @@
 #!/bin/bash
 
 # 공통 변수 설정
-# 현재 디렉토리의 `data` 폴더를 Docker 컨테이너에 마운트할 볼륨 디렉토리로 지정
 volume=$PWD/data
-# 사용할 Docker 이미지 지정 (해당 예제에서는 Nvidia T4 기반의 이미지 활용)
-image=ghcr.io/huggingface/text-embeddings-inference:turing-1.3 # Tesla T4
-# 사용할 모델의 버전(revision)을 지정 (기본은 main 브랜치)
 revision=main
+
+# 실행 시 첫 번째 매개변수로 GPU 타입 입력 (기본값: T4)
+gpu_type=${1:-T4}
+
+# GPU 타입에 따른 이미지 선택
+if [[ $gpu_type == "T4" ]]; then
+  image=ghcr.io/huggingface/text-embeddings-inference:turing-1.3
+elif [[ $gpu_type == "L4" ]]; then
+  image=ghcr.io/huggingface/text-embeddings-inference:89-1.5
+elif [[ $gpu_type == "A100" ]]; then
+  image=ghcr.io/huggingface/text-embeddings-inference:1.5
+elif [[ $gpu_type == "H100" ]]; then
+  image=ghcr.io/huggingface/text-embeddings-inference:hopper-1.6
+else
+  echo "Invalid GPU type. Please specify 'T4', 'L4', 'A100', 'H100'"
+  exit 1
+fi
 
 # Docker 네트워크 생성
 # `tei-net`이라는 네트워크를 생성하여 모델 컨테이너와 Nginx 로드 밸런서를 연결
@@ -27,15 +40,15 @@ run_docker() {
 
   # 모델 컨테이너 실행 (해당 예제에서는 두 개의 GPU 장치를 사용해 컨테이너를 각각 실행하며, GPU ID는 0과 1로 할당)
   for i in $(seq 0 1); do
-    docker run --runtime=nvidia -d --gpus '"device='$i'"' \
+    docker run -d --restart always --gpus '"device='$i'"' \
       --network tei-net --name ${service_name}-$i \
-      -v $volume:/data --pull always $image \
-      --model-id $model --revision $revision --auto-truncate
+      -v $volume:$volume \
+      --pull always $image --model-id $model --revision $revision --auto-truncate
   done
 
   # Nginx 로드 밸런서 컨테이너 실행
   # 모델에 따라 지정된 Nginx 설정 파일을 사용해 로드 밸런서 컨테이너를 시작
-  docker run -d --network tei-net --name nginx-${service_name}-lb \
+  docker run -d --restart always --network tei-net --name nginx-${service_name}-lb \
     -v $PWD/${config_file}:/etc/nginx/conf.d/default.conf:ro \
     -p $port:80 nginx:latest
 }
