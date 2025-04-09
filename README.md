@@ -59,8 +59,27 @@ Where `GPU_TYPE` is one of: T4 (default), L4, A100, or H100.
    - Configure and start Nginx load balancers for each service
 
 ### Access Points
-- Embedding service: http://localhost:8001
-- Reranking service: http://localhost:8002
+- Embedding service: http://localhost:8001/embed
+```
+# 1. single request
+curl 127.0.0.1:8001/embed \
+    -X POST \
+    -d '{"inputs":"What is Deep Learning?"}' \
+    -H 'Content-Type: application/json'
+
+# 2. batch request
+curl 127.0.0.1:8001/embed \
+    -X POST \
+    -d '{"inputs":["Today is a nice day", "I like you"]}' \
+    -H 'Content-Type: application/json'
+```
+- Reranking service: http://localhost:8002/rerank
+```
+curl 127.0.0.1:8002/rerank \
+    -X POST \
+    -d '{"query":"What is Deep Learning?", "texts": ["Deep Learning is not...", "Deep learning is..."], "raw_scores": false}' \
+    -H 'Content-Type: application/json'
+```
 
 ## Data Storage
 The system mounts a local `data` directory to each container for persistent storage and model caching.
